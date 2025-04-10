@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /api/
+
+# Allow direct access to PHP files
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Rewrite all to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
