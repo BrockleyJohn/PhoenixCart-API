@@ -1,9 +1,13 @@
+# $Id$
+#
+# This is used with Apache WebServers
+#
+# For this to work, you must include the parameter 'Options' to
+# the AllowOverride configuration
+#
+
 RewriteEngine On
 RewriteBase /api/
 
-# Allow direct access to PHP files
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# Rewrite all to index.php
-RewriteRule ^(.*)$ index.php [QSA,L]
+# Route /v1/anything → core/Router.php
+RewriteRule ^v1/(.*)$ core/Router.php [QSA,L]

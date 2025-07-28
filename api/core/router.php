@@ -5,61 +5,60 @@
   CE Phoenix, E-Commerce made Easy
   https://phoenixcart.org
 
-  Copyright (c) 2025 Phoenix Cart
+  Copyright (c) 2021 Phoenix Cart
 
   Released under the GNU General Public License
 */
 
-namespace Core;
+// core/Router.php
 
-class Router {
-  private static $routes = [];
-  private static $basePath = '';
+header('Content-Type: application/json');
 
-  // Set base path for current environment (e.g., subfolder or root)
-  public static function setBasePath() {
-    $urlPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    
-    // Get everything before /api to detect the subfolder, if any
-    $basePath = strstr($urlPath, '/api', true);
-    
-    // If there's no subfolder, use an empty string
-    if ($basePath === false) {
-      self::$basePath = '';
-    } else {
-      self::$basePath = rtrim($basePath, '/');
-    }
-  }
+// Load config and utilities
+require_once __DIR__ . '/../config/api.config.php';
+require_once __DIR__ . '/Auth.php';
+require_once __DIR__ . '/Response.php';
 
-  public static function add($method, $pattern, $callback) {
-    self::setBasePath();  
+use PhoenixAPI\Auth;
+use PhoenixAPI\Response;
 
-    // Adjust the pattern to ignore base path
-    $pattern = '#^' . preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $pattern) . '$#';
-    self::$routes[strtoupper($method)][] = ['pattern' => $pattern, 'callback' => $callback];
-  }
+// Parse request URL
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestMethod = $_SERVER['REQUEST_METHOD'];
 
-  public static function dispatch($method, $uri) {
-    $method = strtoupper($method);
-    $path = parse_url($uri, PHP_URL_PATH);
-    $path = rtrim($path, '/');
+// Strip query string if present
+$cleanUri = strtok($requestUri, '?');
 
-    // Only remove the base path before /api, if any
-    if (!empty(self::$basePath)) {
-      // Ensure the base path is only removed before /api
-      if (strpos($path, self::$basePath) === 0) {
-        $path = substr($path, strlen(self::$basePath));
-      }
-    }
+// Match expected pattern: /api/v1/resource
+$pattern = '#v1/([^/]+)(?:/([^/]+))?#';
 
-    foreach (self::$routes[$method] ?? [] as $route) {
-      if (preg_match($route['pattern'], $path, $matches)) {
-        $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-        return call_user_func_array($route['callback'], $params);
-      }
-    }
-
-    http_response_code(404);
-    echo json_encode(['error' => 'Endpoint not found']);
-  }
+if (!preg_match($pattern, $cleanUri, $matches)) {
+  Response::error('Invalid API endpoint', 404);
+  exit;
 }
+
+$resource = $matches[1] ?? null;
+$resourceId = $matches[2] ?? null;
+
+// Verify API key (via Authorization: Bearer {token})
+if (!Auth::isValid()) {
+  Response::error('Unauthorized', 401);
+  exit;
+}
+
+// Map resource to route file
+$routeFile = __DIR__ . "/../routes/{$resource}.php";
+if (!file_exists($routeFile)) {
+  Response::error("Endpoint not found: $resource", 404);
+  exit;
+}
+
+// Pass along resource ID and method via globals or $_GET
+if ($resourceId) {
+  $_GET['id'] = $resourceId;
+}
+
+$_GET['method'] = $requestMethod;
+
+// Include the handler
+require_once $routeFile;
