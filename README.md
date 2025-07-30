@@ -26,12 +26,25 @@ Upload all.
 
 Use
 -----
-https://yourshop.com/{folder}/api/product
+
+Note that token is hard-coded to ABC123 for testing purposes.
+This will *obviously* change in the future.
+
+/api/v1/products/?token=ABC123
 show details of all your products
 
-https://yourshop.com/{folder}/api/product/8
-show details of product id 8
+/api/v1/products/8?token=ABC123
+show details of single product id
 
-https://yourshop.com/{folder}/api/product/search/apple
-show details of keyword "apple"
+/api/v1/search?q=orange&token=ABC123
+show result of keyword "orange"
+
+/api/v1/categories/?token=ABC123
+categories
+
+/api/v1/currencies/?token=ABC123
+currencies
+
+/api/v1/manufacturers/?token=ABC123
+manufacturers
 
