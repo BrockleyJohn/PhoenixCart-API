@@ -10,4 +10,4 @@ RewriteEngine On
 RewriteBase /api/
 
 # Route /v1/anything → core/Router.php
-RewriteRule ^v1/(.*)$ core/Router.php [QSA,L]
+RewriteRule ^v1/(.*)$ core/router.php [QSA,L]
