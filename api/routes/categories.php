@@ -60,19 +60,43 @@ if ($isSingle) {
     ? HTTP_SERVER . DIR_WS_CATALOG . 'images/' . $row['categories_image']
     : null;
 
-  // Product count
-  $count_stmt = $db->prepare("
-    SELECT COUNT(*) AS product_count
-    FROM products_to_categories ptc
-    JOIN products p ON p.products_id = ptc.products_id
-    WHERE ptc.categories_id = ? AND p.products_status = 1
-  ");
-  $count_stmt->bind_param('i', $categoryId);
-  $count_stmt->execute();
-  $count_res = $count_stmt->get_result();
-  $count_row = $count_res->fetch_assoc();
-  $row['product_count'] = (int)$count_row['product_count'];
+  if ('products' === $_GET['expand'] ?? '') {
+    // Fetch products in this category
+    $prod_stmt = $db->prepare("
+      SELECT p.*, pd.*
+      FROM products p
+      LEFT JOIN products_description pd ON pd.products_id = p.products_id
+        AND pd.language_id = ?
+      JOIN products_to_categories ptc ON ptc.products_id = p.products_id
+      WHERE ptc.categories_id = ? AND p.products_status = 1
+      ORDER BY p.products_date_added DESC
+    ");
+    $prod_stmt->bind_param('ii', $language_id, $categoryId);
+    $prod_stmt->execute();
+    $prod_res = $prod_stmt->get_result();
 
+    $products = [];
+    while ($product = $prod_res->fetch_assoc()) {
+      $product['image_url'] = !empty($product['products_image'])
+        ? HTTP_SERVER . DIR_WS_CATALOG . 'images/' . $product['products_image']
+        : null;
+      $products[] = $product;
+    }
+    $row['products'] = $products;
+  } else {
+    // Product count
+    $count_stmt = $db->prepare("
+      SELECT COUNT(*) AS product_count
+      FROM products_to_categories ptc
+      JOIN products p ON p.products_id = ptc.products_id
+      WHERE ptc.categories_id = ? AND p.products_status = 1
+    ");
+    $count_stmt->bind_param('i', $categoryId);
+    $count_stmt->execute();
+    $count_res = $count_stmt->get_result();
+    $count_row = $count_res->fetch_assoc();
+    $row['product_count'] = (int)$count_row['product_count'];
+  }
   // Child categories
   $child_stmt = $db->prepare("
     SELECT c.*, cd.*

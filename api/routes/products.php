@@ -28,6 +28,7 @@ $productId   = $isSingle ? (int)$lastSegment : null;
 
 $method      = $_SERVER['REQUEST_METHOD'];
 $language_id = (int)($_GET['language_id'] ?? $languages_id ?? 1);
+$categories_id = (int)($_GET['categories_id'] ?? null);
 $page        = max(1, (int)($_GET['page'] ?? 1));
 $limit       = max(1, (int)($_GET['limit'] ?? 25));
 $offset      = ($page - 1) * $limit;
@@ -219,16 +220,31 @@ $count_res = $count_stmt->get_result();
 $total = (int)$count_res->fetch_assoc()['total'];
 $pages = ceil($total / $limit);
 
-$stmt = $db->prepare("
-  SELECT p.*, pd.*
-  FROM products p
-  LEFT JOIN products_description pd ON pd.products_id = p.products_id
-    AND pd.language_id = ?
-  WHERE p.products_status = 1
-  ORDER BY p.products_date_added DESC
-  LIMIT ? OFFSET ?
-");
-$stmt->bind_param('iii', $language_id, $limit, $offset);
+if (is_null($categories_id)) {
+  $stmt = $db->prepare("
+    SELECT p.*, pd.*
+    FROM products p
+    LEFT JOIN products_description pd ON pd.products_id = p.products_id
+      AND pd.language_id = ?
+    WHERE p.products_status = 1
+    ORDER BY p.products_date_added DESC
+    LIMIT ? OFFSET ?
+  ");
+  $stmt->bind_param('iii', $language_id, $limit, $offset);
+} else {
+  $stmt = $db->prepare("
+    SELECT p.*, pd.*
+    FROM products p
+    INNER JOIN products_to_categories p2c ON p2c.products_id = p.products_id
+      AND p2c.categories_id = ?
+    LEFT JOIN products_description pd ON pd.products_id = p.products_id
+      AND pd.language_id = ?
+    WHERE p.products_status = 1
+    ORDER BY p.products_date_added DESC
+    LIMIT ? OFFSET ?
+  ");
+  $stmt->bind_param('iiii', $categories_id, $language_id, $limit, $offset);
+}
 $stmt->execute();
 $res = $stmt->get_result();
 
